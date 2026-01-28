@@ -136,5 +136,9 @@
   .hero-image.scrolled {
     transform: rotateX(0deg) scale(1) translateY(40px);
   }
+
+  .gradient-title {
+    background: linear-gradient(to bottom, #0f172a, #1e293b, #64748b);
+  }
 }
 

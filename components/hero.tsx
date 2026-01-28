@@ -32,7 +32,7 @@ const HeroSection = () => {
   return (
     <div className="pt-20 pb-20 px-4">
       <div className="container mx-auto text-center">
-        <h1 className="text-5xl md:text-8xl lg:text-[105px] pb-6 font-extrabold tracking-tighter bg-linear-to-b from-slate-900 via-slate-800 to-slate-600 bg-clip-text text-transparent">
+        <h1 className="text-5xl md:text-8xl lg:text-[105px] pb-6 font-extrabold tracking-tighter bg-clip-text text-transparent gradient-title">
           Manage Your Finances <br />with Intelligence
         </h1>
         <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">

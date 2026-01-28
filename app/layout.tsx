@@ -3,6 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/header";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,7 +26,8 @@ export default function RootLayout({
             <ClerkProvider>
         {/* header */}
         <Header />
-        <main className="min-h-screen">{children}</main>
+          <main className="min-h-screen">{children}</main>
+          <Toaster richColors/>
         {/* footer */}
         <footer className="bg-white py-12 border-t border-slate-100">
           <div className="container mx-auto px-4">
