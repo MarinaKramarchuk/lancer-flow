@@ -77,7 +77,7 @@ const CreateAccountDrawer: React.FC<{ children: React.ReactNode }> = ({ children
           <DrawerTitle>Create New Account</DrawerTitle>
         </DrawerHeader>
         <DrawerDescription>Fill out the form below to add a new bank account.</DrawerDescription>
-        <div className="px-4 pb-4">
+        <div className="mt-4 px-4 pb-4">
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-2 mb-4">
               <label htmlFor="name" className="text-sm font-medium mb-2 block">
