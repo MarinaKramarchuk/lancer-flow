@@ -47,7 +47,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-24 bg-slate-50 border-t border-slate-100">
+      <section className="py-24 bg-slate-50 border-t border-slate-100" id="how_it_works">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl font-bold text-slate-900 text-center mb-16 tracking-tight">
             How It Works

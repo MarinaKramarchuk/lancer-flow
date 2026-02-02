@@ -4,13 +4,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import React from "react";
 import AccountCard from "./_components/account_card";
+import { Account } from "@prisma/client";
+import { getCurrentBudget } from "@/actions/budjet";
+import BudgetProgress from "./_components/budget-progress";
 
 const DashboardPage: React.FC = async () => {
-  const accounts = await getUserAccounts();
-  
+  const accounts: Account[] = await getUserAccounts();
+
+  const defaultAccount = accounts?.find(
+    (account: Account) => account.isDefault,
+  );
+
+  let budgetData = null;
+  if (defaultAccount) {
+    budgetData = await getCurrentBudget(defaultAccount.id);
+  }
+
   return (
-    <div className="px-5">
+    <div className="space-y-8">
       {/* Budget Progress */}
+      {defaultAccount && (
+        <BudgetProgress
+          initialBudget={budgetData?.budget}
+          currentExpenses={budgetData?.currentExpenses || 0}
+        />
+      )}
 
       {/* Overview */}
 
@@ -27,13 +45,17 @@ const DashboardPage: React.FC = async () => {
         </CreateAccountDrawer>
 
         {accounts.length > 0 &&
-          accounts?.map((account) => {
-            return <AccountCard key={account.id} account={account} />;
-        })}
+          accounts.map((account) => {
+            const formattedAccount = {
+              ...account,
+              balance: Number(account.balance),
+            };
 
+            return <AccountCard key={account.id} account={formattedAccount} />;
+          })}
       </div>
     </div>
   );
-}
+};
 
 export default DashboardPage;

@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
 
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="scroll-smooth">
       <body
         className={`${inter.className}`} suppressHydrationWarning
       >

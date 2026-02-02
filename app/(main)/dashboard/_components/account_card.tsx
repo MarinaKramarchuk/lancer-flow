@@ -7,25 +7,25 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { AccountFormData } from "@/app/lib/schema";
+} from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import useFetch from "@/hooks/use-fetch";
 import { updateDefaultAccount } from "@/actions/accounts";
 import { toast } from "sonner";
+import { Account } from "@prisma/client";
 
 type AccountCardProps = {
-  account: AccountFormData & { id: string }; 
-}
+  account: Omit<Account, "balance"> & { balance: number };
+};
 
 const AccountCard = ({ account }: AccountCardProps) => {
   const { name, type, balance, id, isDefault } = account;
 
   const {
-    loading: updateDefaultLoading, 
-    fn: updateDefaultAccountFn, 
+    loading: updateDefaultLoading,
+    fn: updateDefaultAccountFn,
     data: updatedAccount,
     error,
   } = useFetch(updateDefaultAccount);
@@ -40,13 +40,13 @@ const AccountCard = ({ account }: AccountCardProps) => {
     await updateDefaultAccountFn(id);
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     if (updatedAccount?.succes) {
       toast.success("Default account updated successfully!");
     }
   }, [updatedAccount, updateDefaultAccount]);
-  
-  useEffect(() => { 
+
+  useEffect(() => {
     if (error) {
       toast.error(error.message || "Failed to update default account.");
     }
@@ -55,29 +55,29 @@ const AccountCard = ({ account }: AccountCardProps) => {
   return (
     <Card className="hover:shadow-lg transition-shadow group relative ">
       <Link href={`/account/${id}`}>
-      <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
-        <CardTitle>{name}</CardTitle>
-          <Switch checked={isDefault}
+        <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
+          <CardTitle>{name}</CardTitle>
+          <Switch
+            checked={isDefault}
             onClick={handleDefaultChange}
-            disabled={updateDefaultLoading} />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">
-          ${balance.toFixed(2)}
-        </div>
-        <p className="text-xs text-muted-foreground ">
-          { type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() } Account
-        </p>
-      </CardContent>
-      <CardFooter className="mt-6 flex justify-between text-sm text-muted-foreground">
-        <div className="flex items-center justify-between">
-          <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
-          Income
-        </div>
-        <div className="flex items-center justify-between">
-          <ArrowDownRight className="mr-1 h-4 w-4 text-red-500" />
-          Expense
-        </div>
+            disabled={updateDefaultLoading}
+          />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">${balance.toFixed(2)}</div>
+          <p className="text-xs text-muted-foreground ">
+            {type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()} Account
+          </p>
+        </CardContent>
+        <CardFooter className="mt-6 flex justify-between text-sm text-muted-foreground">
+          <div className="flex items-center justify-between">
+            <ArrowUpRight className="mr-1 h-4 w-4 text-green-500" />
+            Income
+          </div>
+          <div className="flex items-center justify-between">
+            <ArrowDownRight className="mr-1 h-4 w-4 text-red-500" />
+            Expense
+          </div>
         </CardFooter>
       </Link>
     </Card>
