@@ -1,5 +1,7 @@
 "use server"
+import aj from "@/lib/arcjet";
 import { db } from "@/lib/prisma";
+import { request } from "@arcjet/next";
 import { auth } from "@clerk/nextjs/server";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -17,7 +19,30 @@ export async function createTransaction(
     const { userId } = await auth();
     if (!userId) throw new Error("User not authenticated");
 
-    //Arcjet to add rate limiting
+    // Get t=request data for ArcJet
+    const req = await request();
+
+    // Check rate limit
+    const decision = await aj.protect(req, {
+      userId,
+      requested: 1, // Specify how many tokens to consume
+    });
+
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) { 
+        const { remaining, reset } = decision.reason;
+        console.error({
+          code: "RATE_LIMIT_EXCEEDED",
+          details: {
+            remaining,
+            resetInSeconds: reset,
+          }
+        });
+        throw new Error(`Rate limit exceeded. Try again later.`);
+      }
+      throw new Error("Request Blocked");
+    }
+
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
