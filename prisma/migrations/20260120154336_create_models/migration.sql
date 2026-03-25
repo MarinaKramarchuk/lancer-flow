@@ -47,7 +47,7 @@ CREATE TABLE "transactions" (
     "category" TEXT NOT NULL,
     "receiptUrl" TEXT,
     "isRecurring" BOOLEAN NOT NULL DEFAULT false,
-    "reccurringInterval" "RecurringInterval",
+    "recurringInterval" "RecurringInterval",
     "nextRecurringDate" TIMESTAMP(3),
     "lastProcessed" TIMESTAMP(3),
     "status" "TransactionStatus" NOT NULL DEFAULT 'COMPLETED',

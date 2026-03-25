@@ -366,7 +366,7 @@ const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
                             <RefreshCcw className="h-3 w-3" />
                             {
                               RECURRING_INTERVALS[
-                                transaction.reccurringInterval as keyof typeof RECURRING_INTERVALS
+                                transaction.recurringInterval as keyof typeof RECURRING_INTERVALS
                               ]
                             }
                           </Badge>

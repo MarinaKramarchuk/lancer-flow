@@ -1,6 +1,6 @@
 "use client";
 
-import { createTransaction } from "@/actions/transaction";
+import { createTransaction, updateTransaction } from "@/actions/transaction";
 import { transactionSchema } from "@/app/lib/schema";
 import { Category } from "@/data/categories";
 import useFetch from "@/hooks/use-fetch";
@@ -26,11 +26,12 @@ import {
 import { Input } from "@/components/ui/input";
 import CreateAccountDrawer from "@/components/create-accaunt-drawer";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import ReceiptScanner from "./receiptScanner";
 
 type AccountWithTransactions = Prisma.AccountGetPayload<{
   include: {
@@ -44,9 +45,19 @@ type TransactionFormData = z.infer<typeof transactionSchema>;
 type Props = {
   accounts: AccountWithTransactions[];
   categories: Category[];
+  editMode: boolean;
+  initialData: any;
 };
-const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
+const AddTransactionForm: React.FC<Props> = ({
+  accounts,
+  categories,
+  editMode = false,
+  initialData = null,
+}) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
+
   const {
     register,
     setValue,
@@ -57,21 +68,35 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
     control,
   } = useForm({
     resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      type: "EXPENSE",
-      amount: "",
-      description: "",
-      accountId: accounts.find((ac) => ac.isDefault)?.id || "",
-      date: new Date(),
-      isRecurring: false,
-    },
+    defaultValues:
+      editMode && initialData
+        ? {
+            type: initialData.type,
+            amount: initialData.amount.toString(),
+            description: initialData.description || "",
+            accountId: initialData.accountId,
+            date: new Date(initialData.date),
+            category: initialData.categoryId || "",
+            isRecurring: initialData.isRecurring,
+            ...(initialData.recurringInterval && {
+              recurringInterval: initialData.recurringInterval,
+            }),
+          }
+        : {
+            type: "EXPENSE",
+            amount: "",
+            description: "",
+            accountId: accounts.find((ac) => ac.isDefault)?.id || "",
+            date: new Date(),
+            isRecurring: false,
+          },
   });
 
   const {
     loading: transactionLoading,
     fn: transactionFn,
     data: transactionResult,
-  } = useFetch(createTransaction);
+  } = useFetch(editMode ? updateTransaction : createTransaction);
 
   const type = useWatch({ control, name: "type" });
   const isRecurring = useWatch({ control, name: "isRecurring" });
@@ -83,22 +108,47 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
       amount: parseFloat(data.amount),
     };
 
-    transactionFn(formData);
+    if (editMode) {
+      transactionFn(editId!, formData);
+    } else {
+      transactionFn(formData);
+    }
   };
 
   useEffect(() => {
     if (transactionResult?.success && !transactionLoading) {
-      toast.success("Transaction created successfully!");
+      toast.success(
+        editMode
+          ? "Transaction updated successfully!"
+          : "Transaction created successfully!",
+      );
       reset();
       router.push(`/account/${transactionResult.data.accountId}`);
     }
-  }, [transactionResult, transactionLoading, reset, router]);
+  }, [transactionResult, transactionLoading, reset, editMode, router]);
 
-  const filteredCategories = categories.filter((cat) => cat.type === type);
+  const filteredCategories = categories.filter(
+    (cat) => cat.type === (type || initialData?.type || "EXPENSE"),
+  );
+
+  const handleScanComplete = (scanData: any) => {
+    if (scanData) {
+      setValue("date", new Date(scanData.date));
+      setValue("amount", scanData.amount.toString());
+    }
+    if (scanData.description) {
+      setValue("description", scanData.description);
+    }
+
+    setValue("category", scanData.category);
+  };
+
+  console.log("Form Errors:", errors);
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
       {/* AI Receipt Scanner*/}
+      {!editMode && <ReceiptScanner onScanComplete={handleScanComplete} />}
 
       <div className="space-y-2">
         <label className="text-sm font-medium">Type</label>
@@ -106,7 +156,7 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           onValueChange={(value) =>
             setValue("type", value as "EXPENSE" | "INCOME")
           }
-          defaultValue={type}
+          value={type}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select type" />
@@ -119,8 +169,8 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           </SelectContent>
         </Select>
 
-        {errors.type && (
-          <p className="text-sm text-red-500">{errors.type.message}</p>
+        {errors.type?.message && (
+          <p className="text-sm text-red-500">{String(errors.type.message)}</p>
         )}
       </div>
 
@@ -134,8 +184,10 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
             {...register("amount")}
           />
 
-          {errors.amount && (
-            <p className="text-sm text-red-500">{errors.amount.message}</p>
+          {errors.amount?.message && (
+            <p className="text-sm text-red-500">
+              {String(errors.amount.message)}
+            </p>
           )}
         </div>
 
@@ -165,8 +217,10 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
             </SelectContent>
           </Select>
 
-          {errors.accountId && (
-            <p className="text-sm text-red-500">{errors.accountId.message}</p>
+          {errors.accountId?.message && (
+            <p className="text-sm text-red-500">
+              {String(errors.accountId.message)}
+            </p>
           )}
         </div>
       </div>
@@ -175,7 +229,7 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
         <label className="text-sm font-medium">Category</label>
         <Select
           onValueChange={(value) => setValue("category", value)}
-          defaultValue={getValues("category")}
+          value={getValues("category")}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select category" />
@@ -189,8 +243,10 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           </SelectContent>
         </Select>
 
-        {errors.category && (
-          <p className="text-sm text-red-500">{errors.category.message}</p>
+        {errors.category?.message && (
+          <p className="text-sm text-red-500">
+            {String(errors.category.message)}
+          </p>
         )}
       </div>
 
@@ -222,8 +278,8 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           </PopoverContent>
         </Popover>
 
-        {errors.date && (
-          <p className="text-sm text-red-500">{errors.date.message}</p>
+        {errors.date?.message && (
+          <p className="text-sm text-red-500">{String(errors.date.message)}</p>
         )}
       </div>
 
@@ -236,8 +292,10 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           placeholder="Enter description"
           {...register("description")}
         />
-        {errors.description && (
-          <p className="text-sm text-red-500">{errors.description.message}</p>
+        {errors.description?.message && (
+          <p className="text-sm text-red-500">
+            {String(errors.description.message)}
+          </p>
         )}
       </div>
 
@@ -280,9 +338,9 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
             </SelectContent>
           </Select>
 
-          {errors.recurringInterval && (
+          {errors.recurringInterval?.message && (
             <p className="text-sm text-red-500">
-              {errors.recurringInterval.message}
+              {String(errors.recurringInterval.message)}
             </p>
           )}
         </div>
@@ -298,7 +356,16 @@ const AddTransactionForm: React.FC<Props> = ({ accounts, categories }) => {
           Cancel
         </Button>
         <Button type="submit" className="flex-1" disabled={transactionLoading}>
-          Create Transaction
+          {transactionLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {editMode ? "Updating..." : "Creating..."}
+            </>
+          ) : editMode ? (
+            "Update Transaction"
+          ) : (
+            "Create Transaction"
+          )}
         </Button>
       </div>
     </form>
