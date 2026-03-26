@@ -44,7 +44,7 @@ const AccountCard = ({ account }: AccountCardProps) => {
     if (updatedAccount?.succes) {
       toast.success("Default account updated successfully!");
     }
-  }, [updatedAccount, updateDefaultAccount]);
+  }, [updatedAccount]);
 
   useEffect(() => {
     if (error) {

@@ -1,12 +1,13 @@
-import { getUserAccounts } from "@/actions/dashboard";
+import { getDashboardData, getUserAccounts } from "@/actions/dashboard";
 import CreateAccountDrawer from "@/components/create-accaunt-drawer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import React from "react";
+import React, { Suspense } from "react";
 import AccountCard from "./_components/account_card";
 import { Account } from "@prisma/client";
 import { getCurrentBudget } from "@/actions/budjet";
 import BudgetProgress from "./_components/budget-progress";
+import DashboardOverview from "./_components/transaction-overview";
 
 const DashboardPage: React.FC = async () => {
   const accounts: Account[] = await getUserAccounts();
@@ -20,6 +21,8 @@ const DashboardPage: React.FC = async () => {
     budgetData = await getCurrentBudget(defaultAccount.id);
   }
 
+  const transactions = await getDashboardData();
+
   return (
     <div className="space-y-8">
       {/* Budget Progress */}
@@ -31,6 +34,12 @@ const DashboardPage: React.FC = async () => {
       )}
 
       {/* Overview */}
+      <Suspense fallback={"Loading Overview..."}>
+        <DashboardOverview
+          accounts={accounts}
+          transactions={transactions || []}
+        />
+      </Suspense>
 
       {/* Accounts Grid */}
 
