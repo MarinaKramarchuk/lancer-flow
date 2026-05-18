@@ -34,7 +34,7 @@ A comprehensive, production-ready full-stack financial management platform built
 
 ### 1. Clone the repository
 
-````bash
+```bash
 git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
 cd your-repo-name
 ```
