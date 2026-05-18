@@ -37,10 +37,12 @@ A comprehensive, production-ready full-stack financial management platform built
 ````bash
 git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
 cd your-repo-name
+```
 
 ### 2. Install dependencies
 ```bash
 npm install --legacy-peer-deps
+```
 
 ### 3. Environment Variables
 Create a `.env.local` file in the root directory and add the following keys:
@@ -60,14 +62,17 @@ GEMINI_API_KEY="your-gemini-api-key"
 # Inngest & Resend
 INNGEST_EVENT_KEY="your-inngest-event-key"
 RESEND_API_KEY="your-resend-api-key"
+```
 
 ### 4. Run database migrations
 ```bash
 npx prisma db push
+```
 
 ### 5. Start the development server
 ```bash
 npm run dev
+```
 
 Open http://localhost:3000 with your browser to see the result.
 
