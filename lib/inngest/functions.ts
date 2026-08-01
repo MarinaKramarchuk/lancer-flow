@@ -69,8 +69,15 @@ export const checkBudgetAlert = inngest.createFunction(
           percentageUsed >= 80 &&
           (!lastAlertDate || isNewMonth(lastAlertDate, currentDate))
         ) {
-          await sendEmail({
-            to: budget.user.email ?? "",
+          if (!budget.user.email) {
+            console.error(
+              `Skipping budget alert for budget ${budget.id}: user has no email`,
+            );
+            return;
+          }
+
+          const emailResult = await sendEmail({
+            to: budget.user.email,
             subject: `Budget Alert for ${defaultAccount.name}`,
             react: EmailTemplate({
               userName: budget.user.name ?? "User",
@@ -83,6 +90,14 @@ export const checkBudgetAlert = inngest.createFunction(
               },
             }),
           });
+
+          if (!emailResult.success) {
+            console.error(
+              `Failed to send budget alert for budget ${budget.id}:`,
+              emailResult.error,
+            );
+            return;
+          }
 
           await db.budget.update({
             where: { id: budget.id },
@@ -235,3 +250,86 @@ function isTransactionDue(transaction: any) {
 
   return nextDate <= today;
 }
+
+async function getMonthlyStats(userId: string, month: Date) {
+  const startDate = new Date(month.getFullYear(), month.getMonth(), 1);
+  const endDate = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+
+  const transactions = await db.transaction.findMany({
+    where: {
+      userId,
+      date: { gte: startDate, lte: endDate },
+    },
+  });
+
+  return transactions.reduce(
+    (stats, transaction) => {
+      const amount = transaction.amount.toNumber();
+      if (transaction.type === "EXPENSE") {
+        stats.totalExpenses += amount;
+        stats.byCategory[transaction.category] =
+          (stats.byCategory[transaction.category] || 0) + amount;
+      } else {
+        stats.totalIncome += amount;
+      }
+      return stats;
+    },
+    {
+      totalExpenses: 0,
+      totalIncome: 0,
+      byCategory: {} as Record<string, number>,
+    },
+  );
+}
+
+export const generateMonthlyReports = inngest.createFunction(
+  {
+    id: "generate-monthly-reports",
+    name: "Generate Monthly Reports",
+  },
+  { cron: "0 0 1 * *" },
+  async ({ step }) => {
+    const users = await step.run("fetch-users", async () => {
+      return await db.user.findMany();
+    });
+
+    for (const user of users) {
+      await step.run(`generate-report-${user.id}`, async () => {
+        const lastMonth = new Date();
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+        const stats = await getMonthlyStats(user.id, lastMonth);
+
+        if (stats.totalIncome === 0 && stats.totalExpenses === 0) {
+          return;
+        }
+
+        const monthName = lastMonth.toLocaleString("default", {
+          month: "long",
+        });
+
+        const emailResult = await sendEmail({
+          to: user.email,
+          subject: `Your Monthly Financial Report - ${monthName}`,
+          react: EmailTemplate({
+            userName: user.name ?? "User",
+            type: "monthly-report",
+            data: {
+              month: monthName,
+              stats,
+            },
+          }),
+        });
+
+        if (!emailResult.success) {
+          console.error(
+            `Failed to send monthly report for user ${user.id}:`,
+            emailResult.error,
+          );
+        }
+      });
+    }
+
+    return { processed: users.length };
+  },
+);

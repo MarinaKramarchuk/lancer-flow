@@ -18,6 +18,7 @@ const ReceiptScanner = ({ onScanComplete }: Props) => {
     loading: scanReceiptLoading,
     fn: scanReceiptFn,
     data: scannedData,
+    setData: setScannedData,
   } = useFetch(scanReceipt);
 
   const handleReceiptScan = async (file: File) => {
@@ -34,8 +35,9 @@ const ReceiptScanner = ({ onScanComplete }: Props) => {
     if (scannedData && !scanReceiptLoading) {
       onScanComplete(scannedData);
       toast.success("Receipt scanned successfully!");
+      setScannedData(null);
     }
-  }, [scannedData, onScanComplete, scanReceiptLoading]);
+  }, [scannedData, onScanComplete, scanReceiptLoading, setScannedData]);
 
   return (
     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
@@ -43,7 +45,7 @@ const ReceiptScanner = ({ onScanComplete }: Props) => {
         type="file"
         ref={fileInputRef}
         className="hidden"
-        accept="image/"
+        accept="image/*"
         capture="environment"
         onChange={(e) => {
           const file = e.target.files?.[0];

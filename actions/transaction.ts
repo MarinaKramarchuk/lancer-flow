@@ -140,7 +140,7 @@ export async function scanReceipt(file: File) {
     `;
 
     const result = await genAI.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",
@@ -167,16 +167,28 @@ export async function scanReceipt(file: File) {
 
     try {
       const data = JSON.parse(cleanedText);
+
+      if (!data || Object.keys(data).length === 0 || !data.amount) {
+        throw new Error(
+          "Could not detect a receipt in this image. Please try another photo.",
+        );
+      }
+
+      const parsedDate = new Date(data.date);
+
       return {
         amount: parseFloat(data.amount) || 0,
-        date: new Date(data.date) || null,
+        date: isNaN(parsedDate.getTime()) ? new Date() : parsedDate,
         description: data.description || "",
         merchantName: data.merchantName || "",
         category: data.category || "other-expense",
       };
     } catch (parseError) {
       console.error("Error parsing JSON from model response:", parseError);
-      throw new Error("Failed to parse receipt information");
+      throw parseError instanceof Error &&
+        parseError.message.startsWith("Could not detect")
+        ? parseError
+        : new Error("Failed to parse receipt information");
     }
   } catch (error) {
     console.error("Error scanning receipt:", error);
@@ -238,14 +250,16 @@ export async function updateTransaction(
       throw new Error("Transaction not found");
     }
 
-    const oldBalanceChange =
-      originalTransaction.type === "EXPENSE"
-        ? -originalTransaction.amount.toNumber()
-        : originalTransaction.amount.toNumber();
+    const oldAmount = originalTransaction.amount.toNumber();
+    const oldType = originalTransaction.type;
+    const oldEffect = oldType === "EXPENSE" ? -oldAmount : oldAmount;
 
-    const amount = data.amount ?? oldBalanceChange;
+    const newAmount = data.amount ?? oldAmount;
+    const newType = data.type ?? oldType;
+    const newEffect = newType === "EXPENSE" ? -newAmount : newAmount;
 
-    const netBalanceChange = data.type === "EXPENSE" ? -amount : amount;
+    const newAccountId = data.accountId ?? originalTransaction.accountId;
+    const accountChanged = newAccountId !== originalTransaction.accountId;
 
     const transaction = await db.$transaction(async (tx) => {
       const getDate = (date: any): Date => {
@@ -272,19 +286,27 @@ export async function updateTransaction(
         },
       });
 
-      await tx.account.update({
-        where: { id: data.accountId },
-        data: {
-          balance: {
-            increment: netBalanceChange,
-          }
-        },
-      });
+      if (accountChanged) {
+        await tx.account.update({
+          where: { id: originalTransaction.accountId },
+          data: { balance: { increment: -oldEffect } },
+        });
+        await tx.account.update({
+          where: { id: newAccountId },
+          data: { balance: { increment: newEffect } },
+        });
+      } else {
+        await tx.account.update({
+          where: { id: newAccountId },
+          data: { balance: { increment: newEffect - oldEffect } },
+        });
+      }
       return updated;
     });
 
     revalidatePath("/dashboard");
-    revalidatePath(`/account/${data.accountId}`);
+    revalidatePath(`/account/${originalTransaction.accountId}`);
+    if (accountChanged) revalidatePath(`/account/${newAccountId}`);
 
     return { success: true, data: serializeAmount(transaction) };
   } catch (error) {

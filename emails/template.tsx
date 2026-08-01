@@ -15,6 +15,12 @@ type EmailData = {
   totalExpenses?: number;
   percentageUsed?: number;
   accountName?: string;
+  month?: string;
+  stats?: {
+    totalIncome: number;
+    totalExpenses: number;
+    byCategory: Record<string, number>;
+  };
 }
 
 type EmailProps = {
@@ -30,6 +36,59 @@ export default function EmailTemplate({
 }: EmailProps) {
   const { budgetAmount = 0, totalExpenses = 0, percentageUsed = 0 } = data;
   if (type === "monthly-report") {
+    const { month = "", stats } = data;
+    const totalIncome = stats?.totalIncome ?? 0;
+    const monthlyExpenses = stats?.totalExpenses ?? 0;
+    const byCategory = stats?.byCategory ?? {};
+    const categoryEntries = Object.entries(byCategory).sort(
+      ([, a], [, b]) => b - a,
+    );
+
+    return (
+      <Html>
+        <Head />
+        <Preview>Your Monthly Financial Report</Preview>
+        <Body style={styles.body}>
+          <Container style={styles.container}>
+            <Heading style={styles.title}>Monthly Financial Report</Heading>
+            <Text style={styles.text}>Hello {userName},</Text>
+            <Text style={styles.text}>
+              Here&rsquo;s your financial summary for {month}.
+            </Text>
+            <Section style={styles.startsContainer}>
+              <div style={styles.stat}>
+                <Text style={styles.text}>Total Income</Text>
+                <Text style={styles.heading}>${totalIncome.toFixed(2)}</Text>
+              </div>
+              <div style={styles.stat}>
+                <Text style={styles.text}>Total Expenses</Text>
+                <Text style={styles.heading}>
+                  ${monthlyExpenses.toFixed(2)}
+                </Text>
+              </div>
+              <div style={styles.stat}>
+                <Text style={styles.text}>Net</Text>
+                <Text style={styles.heading}>
+                  ${(totalIncome - monthlyExpenses).toFixed(2)}
+                </Text>
+              </div>
+            </Section>
+
+            {categoryEntries.length > 0 && (
+              <Section style={styles.startsContainer}>
+                <Text style={styles.heading}>Expenses by Category</Text>
+                {categoryEntries.map(([category, amount]) => (
+                  <div key={category} style={styles.categoryRow}>
+                    <Text style={styles.text}>{category}</Text>
+                    <Text style={styles.text}>${amount.toFixed(2)}</Text>
+                  </div>
+                ))}
+              </Section>
+            )}
+          </Container>
+        </Body>
+      </Html>
+    );
   }
   if (type === "budget-alert") {
     return (
@@ -108,5 +167,11 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: "#fff",
     borderRadius: "4px",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+  },
+  categoryRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: "8px 0",
+    borderBottom: "1px solid #e5e7eb",
   },
 };

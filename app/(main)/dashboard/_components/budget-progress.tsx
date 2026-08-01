@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Check, Pencil, X } from "lucide-react";
@@ -29,14 +30,23 @@ const BudgetProgress = ({
   initialBudget,
   currentExpenses,
 }: BudgetProgressProps) => {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [newBudget, setNewBudget] = useState<string>(
     initialBudget?.amount?.toString() || "",
   );
+  const [displayedAmount, setDisplayedAmount] = useState<number | undefined>(
+    initialBudget?.amount,
+  );
 
-  const percentUsed = initialBudget
-    ? Math.min((currentExpenses / initialBudget.amount) * 100, 100)
-    : 0;
+  useEffect(() => {
+    setDisplayedAmount(initialBudget?.amount);
+  }, [initialBudget?.amount]);
+
+  const percentUsed =
+    initialBudget && displayedAmount
+      ? Math.min((currentExpenses / displayedAmount) * 100, 100)
+      : 0;
 
   const {
     loading: isLoading,
@@ -53,9 +63,11 @@ const BudgetProgress = ({
       return;
     }
     const result = await updateBudgetFn(amount);
-    if (result && !error) {
+    if (result?.success) {
+      setDisplayedAmount(amount);
       setIsEditing(false);
       setNewBudget("");
+      router.refresh();
     }
   };
 
@@ -113,8 +125,8 @@ const BudgetProgress = ({
             ) : (
               <>
                 <CardDescription>
-                  {initialBudget
-                    ? `$${currentExpenses.toFixed(2)} of $${initialBudget.amount.toFixed(2)} spent`
+                  {initialBudget && displayedAmount !== undefined
+                    ? `$${currentExpenses.toFixed(2)} of $${displayedAmount.toFixed(2)} spent`
                     : "No budget set"}
                 </CardDescription>
                 <Button

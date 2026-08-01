@@ -21,6 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock,
   MoreHorizontal,
@@ -60,6 +62,8 @@ const RECURRING_INTERVALS = {
   YEARLY: "Yearly",
 };
 
+const ITEMS_PER_PAGE = 10;
+
 const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
   transactions,
 }) => {
@@ -73,6 +77,7 @@ const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [typeFilter, setTypeFilter] = useState<string>("");
   const [recurringFilter, setRecurringFilter] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   const {
     loading: deleteLoading,
@@ -135,6 +140,24 @@ const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
     recurringFilter,
     sortConfig,
   ]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAndSortedTransactions.length / ITEMS_PER_PAGE),
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, typeFilter, recurringFilter]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAndSortedTransactions.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredAndSortedTransactions, currentPage]);
 
   const handleSort = (field: string) => {
     setSortConfig((current) => ({
@@ -324,7 +347,7 @@ const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
                 </TableCell>
               </TableRow>
             ) : (
-              filteredAndSortedTransactions.map((transaction) => (
+              paginatedTransactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="w-12.5">
                     <Checkbox
@@ -429,6 +452,38 @@ const TransactionTable: React.FC<{ transactions: Transaction[] }> = ({
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {filteredAndSortedTransactions.length > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages} (
+            {filteredAndSortedTransactions.length} transactions)
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage((page) => Math.min(totalPages, page + 1))
+              }
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

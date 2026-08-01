@@ -6,7 +6,7 @@ import { Category } from "@/data/categories";
 import useFetch from "@/hooks/use-fetch";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Prisma, RecurringInterval } from "@prisma/client";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { format } from "date-fns";
 import { z } from "zod";
@@ -76,7 +76,7 @@ const AddTransactionForm: React.FC<Props> = ({
             description: initialData.description || "",
             accountId: initialData.accountId,
             date: new Date(initialData.date),
-            category: initialData.categoryId || "",
+            category: initialData.category || "",
             isRecurring: initialData.isRecurring,
             ...(initialData.recurringInterval && {
               recurringInterval: initialData.recurringInterval,
@@ -101,6 +101,7 @@ const AddTransactionForm: React.FC<Props> = ({
   const type = useWatch({ control, name: "type" });
   const isRecurring = useWatch({ control, name: "isRecurring" });
   const date = useWatch({ control, name: "date" });
+  const category = useWatch({ control, name: "category" });
 
   const onSubmit = async (data: TransactionFormData) => {
     const formData = {
@@ -131,17 +132,20 @@ const AddTransactionForm: React.FC<Props> = ({
     (cat) => cat.type === (type || initialData?.type || "EXPENSE"),
   );
 
-  const handleScanComplete = (scanData: any) => {
-    if (scanData) {
-      setValue("date", new Date(scanData.date));
-      setValue("amount", scanData.amount.toString());
-    }
-    if (scanData.description) {
-      setValue("description", scanData.description);
-    }
+  const handleScanComplete = useCallback(
+    (scanData: any) => {
+      if (scanData) {
+        setValue("date", new Date(scanData.date));
+        setValue("amount", scanData.amount.toString());
+      }
+      if (scanData?.description) {
+        setValue("description", scanData.description);
+      }
 
-    setValue("category", scanData.category);
-  };
+      setValue("category", scanData.category);
+    },
+    [setValue],
+  );
 
   console.log("Form Errors:", errors);
 
@@ -229,7 +233,7 @@ const AddTransactionForm: React.FC<Props> = ({
         <label className="text-sm font-medium">Category</label>
         <Select
           onValueChange={(value) => setValue("category", value)}
-          value={getValues("category")}
+          value={category}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select category" />
